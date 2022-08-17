@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Unzips fastqc.zips in a directory
+
+# Sets working directory
+FQDIR='/work/Neuroinformatics_Core/s213872/Neurocore/MORGAN/GFP/'
+
+date
+cd ${FQDIR}
+# Loop through the flies in the connected directory, unziping files
+for FILE in *fastqc.zip; do unzip "$FILE"; done
+date

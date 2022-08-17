@@ -1,0 +1,19 @@
+## counting the number of reads per sample with and without (i) MAPQ filtering, (ii) rRNA removal, (iii) mapped and unmapped
+for file in `ls *.MAPQ.bam`
+do
+ #echo ${file}
+ basename=`echo ${file} | sed "s/.bam.MAPQ.bam//g"`
+ #echo ${basename}
+ starout=`echo ${basename}"Aligned.sortedByCoord.out.bam"`
+ primary=`echo ${basename}".Primary.bam"`
+ worrna=`echo ${basename}".bam.ex.bam"`
+ mapqout=`echo ${basename}".bam.MAPQ.bam"`
+#   echo ${starout} ${primary} ${worrna} ${mapqout}
+
+ count1=`samtools view -c ${starout}`
+ count2=`samtools view -c ${primary}`
+ count3=`samtools view -c ${worrna}`
+ count4=`samtools view -c ${mapqout}`
+
+ echo ${basename} ${count1} ${count2} ${count3} ${count4} | sed "s/ /\t/g"
+done

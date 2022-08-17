@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Remove list lines from HTseq count
+for file in `ls *.count`
+ do
+  newname=`basename $file | sed -e "s/.bam.MAPQ.bam.count/.LastLinesRem.txt/"`
+  head -n -5 $file > "$newname"
+  echo $file
+  echo $newname
+done

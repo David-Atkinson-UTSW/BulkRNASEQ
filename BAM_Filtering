@@ -1,0 +1,89 @@
+#!/bin/bash
+#
+# CREATED USING THE BIOHPC PORTAL on Mon May 02 2022 11:44:09 GMT-0500 (Central Daylight Time)
+#
+# This file is batch script used to run commands on the BioHPC cluster.
+# The script is submitted to the cluster using the SLURM `sbatch` command.
+# Lines starting with # are comments, and will not be run.
+# Lines starting with #SBATCH specify options for the scheduler.
+# Lines that do not start with # or #SBATCH are commands that will run.
+
+# Name for the job that will be visible in the job queue and accounting tools.
+#SBATCH --job-name BAM_Filtering
+
+# Name of the SLURM partition that this job should run on.
+#SBATCH -p 256GB       # partition (queue)
+# Number of nodes required to run this job
+#SBATCH -N 1
+
+# Memory (RAM) requirement/limit in MB.
+#SBATCH --mem 252928      # Memory Requirement (MB)
+
+# Time limit for the job in the format Days-H:M:S
+# A job that reaches its time limit will be cancelled.
+# Specify an accurate time limit for efficient scheduling so your job runs promptly.
+#SBATCH -t 4-2:0:0
+
+# The standard output and errors from commands will be written to these files.
+# %j in the filename will be replace with the job number when it is submitted.
+#SBATCH -o BAM_%j.out
+#SBATCH -e BAM_%j.err
+
+# Send an email when the job status changes, to the specfied address.
+#SBATCH --mail-type ALL
+#SBATCH --mail-user David.Atkinson2@UTsouthwestern.edu
+
+
+
+module load samtools/1.6
+module load RSeQC/2.6.4
+
+cd '/work/Neuroinformatics_Core/s213872/Neurocore/VIKRAM/01_FASTQ/'
+
+echo "=====> Listing multimapped reads"
+mkdir MULTIMAPPEDREADS/
+for file in `ls *Aligned.sortedByCoord.out.bam`
+ do
+  echo ${file}
+  outputname=`basename ${file} | sed -e "s/Aligned.sortedByCoord.out.bam/.MultiMappedReads.txt/"`
+  echo ${outputname}
+  samtools view ${file} | grep -v NH:i:1 | perl -pe 's/AS.+(NH:i:\d+)/\$1/' | cut -f1,10,12 | perl -pe 's/NH:i://' | sort -u -k3,3nr > MULTIMAPPEDREADS/${outputname}
+done
+echo "=====> Finished Listing"
+
+
+# Fetch only primary alignment (remove unmapped,chimeric etc etc)
+echo "=====> Fetching primary alignment reads"
+for file in `ls *Aligned.sortedByCoord.out.bam`
+ do
+  echo ${file}
+  outputname=`basename ${file} | sed -e "s/Aligned.sortedByCoord.out.bam/.Primary.bam/"`
+  echo ${outputname}
+  samtools view -F 256 -b ${file} > ${outputname}
+ done
+echo "=====> Finished Fetching"
+
+
+# Split Primary alignment in rRNA (in.bam) and non rRNA (ex.bam)
+echo "=====> Splitting rRNA reads"
+for file in `ls *.Primary.bam`
+ do
+  samname=`basename ${file} | sed -e "s/.Primary//"`
+  split_bam.py -i ${file} -r /work/Neuroinformatics_Core/s213872/RESOURCES/Reference_genome/MM10_GRCm38p6_GENCODEvM17_STAR/mm10_rRNA.bed -o "${samname}"
+  echo $samname
+ done
+echo "=====> Finished Splitting"
+
+rm *.junk.bam
+
+
+# Get uniquely mapped
+echo "=====> Fetching uniquely mapped reads"
+ for file in `ls *.ex.bam`
+  do
+   echo ${file}
+   outputname=`basename $file | sed -e "s/.ex.bam/.MAPQ.bam/"`
+   echo ${outputname}
+   (samtools view -H $file; samtools view -F 2308 $file | grep -w 'NH:i:1') | samtools view -bS - > "$outputname"
+  done
+echo "=====> Finished Fetching"

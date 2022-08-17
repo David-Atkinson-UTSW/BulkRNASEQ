@@ -1,0 +1,85 @@
+#!/bin/bash
+#
+# CREATED USING THE BIOHPC PORTAL on Tue Apr 26 2022 13:51:00 GMT-0500 (Central Daylight Time)
+#
+# This file is batch script used to run commands on the BioHPC cluster.
+# The script is submitted to the cluster using the SLURM `sbatch` command.
+# Lines starting with # are comments, and will not be run.
+# Lines starting with #SBATCH specify options for the scheduler.
+# Lines that do not start with # or #SBATCH are commands that will run.
+
+# Name for the job that will be visible in the job queue and accounting tools.
+#SBATCH --job-name STAR
+
+# Name of the SLURM partition that this job should run on.
+#SBATCH -p 256GB       # partition (queue)
+# Number of nodes required to run this job
+#SBATCH -N 1
+
+# Memory (RAM) requirement/limit in MB.
+#SBATCH --mem 252928      # Memory Requirement (MB)
+
+# Time limit for the job in the format Days-H:M:S
+# A job that reaches its time limit will be cancelled.
+# Specify an accurate time limit for efficient scheduling so your job runs promptly.
+#SBATCH -t 2-0:0:00
+
+# The standard output and errors from commands will be written to these files.
+# %j in the filename will be replace with the job number when it is submitted.
+#SBATCH -o STAR_%j.out
+#SBATCH -e STAR_%j.err
+
+# Send an email when the job status changes, to the specfied address.
+#SBATCH --mail-type ALL
+#SBATCH --mail-user David.Atkinson2@UTsouthwestern.edu
+
+module load star/2.5.2b
+module load samtools/1.6
+
+# COMMAND GROUP 1
+##=================================================##
+## STAR ##
+##=================================================##
+TRIMDIR='/work/Neuroinformatics_Core/s213872/Neurocore/VIKRAM/01_FASTQ/'
+
+#unbottlenecks the number of open files at one time. For use with high thread count
+ulimit -n 16000
+
+date
+echo "================> Running STAR"
+
+cd ${TRIMDIR}
+
+cat samples.txt | while read line
+ do
+  echo "Processing" ${line}
+  fq1=`echo ${line}"_R1_001.NoAdapt.Trim.fastq.gz"`
+  fq2=`echo ${line}"_R2_001.NoAdapt.Trim.fastq.gz"`
+  #outputname=`${line}"_STAROUT"`
+  #outputname=`basename ${fq1} | sed -e "s/_R1_001.NoAdapt.Trim.fastq.gz/_OUTPUT/"`
+  outputname="$line"_OUTPUT""
+  echo "Processing" ${line} "-->" ${outputname}
+  STAR --runThreadN 24 \
+       --genomeDir /work/Neuroinformatics_Core/s213872/RESOURCES/Reference_genome/MM10_GRCm38p6_GENCODEvM17_STAR/ \
+       --readFilesIn ${fq1} ${fq2} \
+       --readFilesCommand zcat \
+       --sjdbGTFfile /work/Neuroinformatics_Core/s213872/RESOURCES/Reference_genome/MM10_GRCm38p6_GENCODEvM17_STAR/gencode.vM17.annotation.gtf \
+       --outFilterType BySJout \
+       --outFilterMultimapNmax 10 \
+       --alignSJoverhangMin 10 \
+       --alignSJDBoverhangMin 1 \
+       --outSAMtype BAM SortedByCoordinate \
+       --outSAMunmapped Within \
+       --outFilterMismatchNmax 3 \
+       --twopassMode Basic \
+       --outFileNamePrefix ${outputname}
+ done
+
+cd ${WORKDIR}
+
+echo "================> Finished STAR"
+date
+
+
+
+# END OF SCRIPT

@@ -1,0 +1,42 @@
+#!/bin/bash
+#
+# CREATED USING THE BIOHPC PORTAL on Mon May 02 2022 11:44:09 GMT-0500 (Central Daylight Time)
+#
+# This file is batch script used to run commands on the BioHPC cluster.
+# The script is submitted to the cluster using the SLURM `sbatch` command.
+# Lines starting with # are comments, and will not be run.
+# Lines starting with #SBATCH specify options for the scheduler.
+# Lines that do not start with # or #SBATCH are commands that will run.
+
+# Name for the job that will be visible in the job queue and accounting tools.
+#SBATCH --job-name HTSeq
+
+# Name of the SLURM partition that this job should run on.
+#SBATCH -p 256GB       # partition (queue)
+# Number of nodes required to run this job
+#SBATCH -N 1
+
+# Memory (RAM) requirement/limit in MB.
+#SBATCH --mem 252928      # Memory Requirement (MB)
+
+# Time limit for the job in the format Days-H:M:S
+# A job that reaches its time limit will be cancelled.
+# Specify an accurate time limit for efficient scheduling so your job runs promptly.
+#SBATCH -t 4-2:0:0
+
+# The standard output and errors from commands will be written to these files.
+# %j in the filename will be replace with the job number when it is submitted.
+#SBATCH -o HTSeq_%j.out
+#SBATCH -e HTSeq_%j.err
+
+# Send an email when the job status changes, to the specfied address.
+#SBATCH --mail-type ALL
+#SBATCH --mail-user David.Atkinson2@UTsouthwestern.edu
+
+
+module add samtools
+module add HTSeq/0.6.1
+
+cd /work/Neuroinformatics_Core/s213872/Neurocore/VIKRAM/01_FASTQ/
+
+ls *.MAPQ.bam | xargs -I % -n 1 -P 36 sh -c 'echo %; htseq-count -f bam -r pos -s reverse -t gene -i gene_name -m intersection-strict % /work/Neuroinformatics_Core/s213872/RESOURCES/Reference_genome/MM10_GRCm38p6_GENCODEvM17_STAR/gencode.vM17.protein_coding.gtf > %.count;'
